@@ -30,6 +30,10 @@
                     <i class="fa-solid fa-image"></i>
                     <span>Quitar Fondo</span>
                 </a>
+                <a href="#" class="nav-item" data-tool="yt-downloader">
+                    <i class="fa-brands fa-youtube"></i>
+                    <span>Descargar de YouTube</span>
+                </a>
                 <!-- Future tools will go here -->
             </nav>
             <div class="sidebar-footer">
@@ -81,6 +85,61 @@
                     </div>
                 </section>
 
+                <!-- YouTube Downloader Tool Section -->
+                <section id="yt-downloader" class="tool-section">
+                    <div class="card yt-download-area" id="yt-form-area">
+                        <i class="fa-brands fa-youtube upload-icon" style="color: var(--accent-color);"></i>
+                        <h3>Descargar videos de YouTube</h3>
+                        <p>Pega el enlace del video de YouTube que deseas descargar.</p>
+
+                        <div class="input-group"
+                            style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 500px; margin-left: auto; margin-right: auto;">
+                            <input type="text" id="yt-url" class="text-input"
+                                placeholder="https://www.youtube.com/watch?v=..."
+                                style="padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; font-family: inherit; width: 100%;">
+
+                            <select id="yt-format" class="text-input"
+                                style="padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; font-family: inherit; width: 100%;">
+                                <option value="video">Video con Audio (MP4)</option>
+                                <option value="video-noaudio">Video Sin Audio (MP4)</option>
+                                <option value="audio">Solo Audio (M4A/MP3)</option>
+                            </select>
+
+                            <select id="yt-quality" class="text-input"
+                                style="padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; font-family: inherit; width: 100%;">
+                                <option value="best">Mejor calidad disponible (hasta 4K/8K)</option>
+                                <option value="1080">1080p (FHD)</option>
+                                <option value="720">720p (HD)</option>
+                                <option value="480">480p</option>
+                                <option value="360">360p</option>
+                            </select>
+
+                            <button class="btn btn-primary" id="btn-yt-download" style="margin-top: 0.5rem;">
+                                <i class="fa-solid fa-download"></i> Descargar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card result-area" id="yt-result-area" style="display: none;">
+                        <div style="text-align: center; margin-bottom: 2rem;">
+                            <i class="fa-solid fa-circle-check"
+                                style="font-size: 4rem; color: var(--accent-color); margin-bottom: 1rem;"></i>
+                            <h3 id="yt-result-title">Descarga Completada</h3>
+                            <p>Tu archivo está listo para ser guardado.</p>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary" id="btn-yt-reset">
+                                <i class="fa-solid fa-rotate-left"></i> Otra Descarga
+                            </button>
+                            <a href="#" class="btn btn-primary" id="btn-yt-save" download
+                                style="text-decoration: none;">
+                                <i class="fa-solid fa-floppy-disk"></i> Guardar Archivo
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Placeholder for future tools -->
             </div>
 
@@ -98,6 +157,7 @@
     <!-- Scripts -->
     <script src="js/app.js"></script>
     <script type="module" src="js/tools/bg-remover.js"></script>
+    <script type="module" src="js/tools/yt-downloader.js"></script>
 </body>
 
 </html>

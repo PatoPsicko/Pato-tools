@@ -22,6 +22,89 @@ try {
             $localPath = "/index.html"
         }
 
+        # Manejar API de descarga de YouTube
+        if ($localPath.StartsWith("/api/yt-download")) {
+            try {
+                if ($request.HttpMethod -eq "POST") {
+                    $reader = New-Object IO.StreamReader($request.InputStream, [Text.Encoding]::UTF8)
+                    $body = $reader.ReadToEnd()
+                    $json = $body | ConvertFrom-Json
+                    $url = $json.url
+                    $type = $json.type # "video", "video-noaudio", "audio"
+                    $quality = $json.quality # "best", "1080", "720", etc.
+
+                    $toolsPath = Join-Path $path "bin"
+                    if (-not (Test-Path $toolsPath)) { New-Item -ItemType Directory -Force -Path $toolsPath | Out-Null }
+                    $ytdlp = Join-Path $toolsPath "yt-dlp.exe"
+
+                    if (-not (Test-Path $ytdlp)) {
+                        Write-Host "Descargando yt-dlp.exe por primera vez..."
+                        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                        Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile $ytdlp
+                    }
+
+                    $downloadsPath = Join-Path $path "downloads"
+                    if (-not (Test-Path $downloadsPath)) { New-Item -ItemType Directory -Force -Path $downloadsPath | Out-Null }
+
+                    # Download FFmpeg if not present (required to merge high-res video and audio)
+                    $ffmpegExe = Join-Path $toolsPath "ffmpeg.exe"
+                    if (-not (Test-Path $ffmpegExe)) {
+                        Write-Host "Descargando FFmpeg (necesario para alta calidad / combinar audio y video)..."
+                        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                        Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-win32-x64" -OutFile $ffmpegExe
+                    }
+
+                    $format = switch ($type) {
+                        "video-noaudio" {
+                            if ($quality -eq "best") { "bestvideo[ext=mp4]/bestvideo" }
+                            else { "bestvideo[height<=$quality][ext=mp4]/bestvideo[height<=$quality]/bestvideo" }
+                        }
+                        "audio" {
+                            "bestaudio[ext=m4a]/bestaudio/best"
+                        }
+                        default { # video with audio
+                            if ($quality -eq "best") { "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best" }
+                            else { "bestvideo[height<=$quality][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=$quality]+bestaudio/best[height<=$quality]" }
+                        }
+                    }
+
+                    $outputTemplate = Join-Path $downloadsPath "%(title)s_%(id)s.%(ext)s"
+
+                    Write-Host "Procesando descarga: $url ($type, $quality)"
+                    $ytArgs = @("--ffmpeg-location", $ffmpegExe, "--print", "after_move:filepath", "--no-playlist", "--no-warnings", "-o", $outputTemplate, "-f", $format, $url)
+                    $result = & $ytdlp $ytArgs
+
+                    $downloadedFile = $result | Where-Object { $_ -match "\S" } | Select-Object -Last 1
+
+                    if ($downloadedFile -and (Test-Path $downloadedFile)) {
+                        $relativePath = $downloadedFile.Replace($path, "").Replace("\", "/")
+                        if (-not $relativePath.StartsWith("/")) { $relativePath = "/$relativePath" }
+
+                        $responseObj = @{ success = $true; fileUrl = $relativePath; title = [System.IO.Path]::GetFileNameWithoutExtension($downloadedFile) }
+                        $resBody = $responseObj | ConvertTo-Json
+                        $response.StatusCode = 200
+                        $response.ContentType = "application/json"
+                        $bytes = [System.Text.Encoding]::UTF8.GetBytes($resBody)
+                        $response.ContentLength64 = $bytes.Length
+                        $response.OutputStream.Write($bytes, 0, $bytes.Length)
+                    } else {
+                        throw "No se pudo descargar el archivo o la URL no es válida."
+                    }
+                }
+            } catch {
+                Write-Host "Error en la API: $_"
+                $responseObj = @{ success = $false; error = $_.Exception.Message }
+                $resBody = $responseObj | ConvertTo-Json
+                $response.StatusCode = 500
+                $response.ContentType = "application/json"
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($resBody)
+                $response.ContentLength64 = $bytes.Length
+                $response.OutputStream.Write($bytes, 0, $bytes.Length)
+            }
+            $response.Close()
+            continue
+        }
+
         $filePath = Join-Path $path $localPath
 
         if (Test-Path $filePath -PathType Leaf) {
@@ -36,6 +119,10 @@ try {
                 ".png"  { $response.ContentType = "image/png" }
                 ".jpg"  { $response.ContentType = "image/jpeg" }
                 ".svg"  { $response.ContentType = "image/svg+xml" }
+                ".mp4"  { $response.ContentType = "video/mp4" }
+                ".m4a"  { $response.ContentType = "audio/mp4" }
+                ".webm" { $response.ContentType = "video/webm" }
+                ".mp3"  { $response.ContentType = "audio/mpeg" }
                 default { $response.ContentType = "application/octet-stream" }
             }
             

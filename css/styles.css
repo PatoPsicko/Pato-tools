@@ -3,20 +3,20 @@
     --bg-primary: #0a0f0d;
     --bg-secondary: #131c18;
     --bg-elevated: #1c2923;
-    
+
     --accent-primary: #1b4332;
     --accent-light: #2d6a4f;
     --accent-glow: rgba(45, 106, 79, 0.4);
-    
+
     --text-primary: #e9ecef;
     --text-secondary: #adb5bd;
     --text-muted: #6c757d;
-    
+
     --border-color: #2b3a32;
-    
+
     /* Typography */
     --font-family: 'Inter', sans-serif;
-    
+
     /* Effects and Transitions */
     --transition-fast: 0.2s ease;
     --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -175,7 +175,8 @@ body {
     cursor: pointer;
 }
 
-.upload-area:hover, .upload-area.dragover {
+.upload-area:hover,
+.upload-area.dragover {
     border-color: var(--accent-light);
     background-color: rgba(45, 106, 79, 0.1);
     box-shadow: var(--shadow-glow);
@@ -266,16 +267,16 @@ body {
     height: auto;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     object-fit: contain;
     max-height: 500px;
 }
 
 .checkerboard-bg {
     background-color: #1a1a1a;
-    background-image: 
-      linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222),
-      linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222);
+    background-image:
+        linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222),
+        linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222);
     background-size: 20px 20px;
     background-position: 0 0, 10px 10px;
     border-radius: var(--radius-md);
@@ -344,12 +345,35 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
 }
 
 /* Responsive */
@@ -357,7 +381,7 @@ body {
     .app-container {
         flex-direction: column;
     }
-    
+
     .sidebar {
         width: 100%;
         height: auto;
@@ -365,7 +389,7 @@ body {
         border-bottom: 1px solid var(--border-color);
         padding: 15px;
     }
-    
+
     .image-comparison {
         grid-template-columns: 1fr;
     }
