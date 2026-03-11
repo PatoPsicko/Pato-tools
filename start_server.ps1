@@ -105,6 +105,86 @@ try {
             continue
         }
 
+        # Manejar API de conversión de documentos
+        if ($localPath.StartsWith("/api/convert-doc")) {
+            try {
+                if ($request.HttpMethod -eq "POST") {
+                    $reader = New-Object IO.StreamReader($request.InputStream, [Text.Encoding]::UTF8)
+                    $body = $reader.ReadToEnd()
+                    $json = $body | ConvertFrom-Json
+                    
+                    $fileName = $json.fileName
+                    $contentBase64 = $json.content
+                    $type = $json.type # "pdf2docx" o "docx2pdf"
+                    
+                    # Decodificar y guardar temporalmente
+                    $tempDir = Join-Path $path "bin\temp"
+                    if (-not (Test-Path $tempDir)) { New-Item -ItemType Directory -Force -Path $tempDir | Out-Null }
+                    
+                    $downloadsPath = Join-Path $path "downloads"
+                    if (-not (Test-Path $downloadsPath)) { New-Item -ItemType Directory -Force -Path $downloadsPath | Out-Null }
+
+                    $inputPath = Join-Path $tempDir $fileName
+                    $bytes = [Convert]::FromBase64String($contentBase64)
+                    [System.IO.File]::WriteAllBytes($inputPath, $bytes)
+                    
+                    $baseName = [System.IO.Path]::GetFileNameWithoutExtension($fileName)
+                    $outExt = if ($type -eq "pdf2docx") { ".docx" } else { ".pdf" }
+                    $outputName = $baseName + $outExt
+                    $outputPath = Join-Path $downloadsPath $outputName
+                    
+                    $pythonScript = Join-Path $path "bin\doc_converter.py"
+                    
+                    Write-Host "Ejecutando conversión con Python: $type"
+                    
+                    # Comprobar Python
+                    if (-not (Get-Command "python" -ErrorAction SilentlyContinue)) {
+                        throw "Python no está instalado o no está en el PATH de Windows."
+                    }
+                    
+                    # Intentar instalar dependencias si fallan
+                    $checkDeps = & python -c "import docx2pdf; import pdf2docx" 2>&1
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Host "Instalando dependencias de Python (docx2pdf, pdf2docx)..."
+                        & python -m pip install docx2pdf pdf2docx pywin32
+                    }
+                    
+                    # Ejecutar Python
+                    $pyArgs = @($pythonScript, $type, $inputPath, $outputPath)
+                    $pyResult = & python $pyArgs 2>&1
+                    
+                    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $outputPath)) {
+                        throw "Error en Python: $pyResult"
+                    }
+                    
+                    # Limpiar input
+                    Remove-Item $inputPath -Force
+                    
+                    $relativePath = $outputPath.Replace($path, "").Replace("\", "/")
+                    if (-not $relativePath.StartsWith("/")) { $relativePath = "/$relativePath" }
+
+                    $responseObj = @{ success = $true; fileUrl = $relativePath; outputName = $outputName }
+                    $resBody = $responseObj | ConvertTo-Json
+                    $response.StatusCode = 200
+                    $response.ContentType = "application/json"
+                    $outBytes = [System.Text.Encoding]::UTF8.GetBytes($resBody)
+                    $response.ContentLength64 = $outBytes.Length
+                    $response.OutputStream.Write($outBytes, 0, $outBytes.Length)
+                }
+            } catch {
+                Write-Host "Error en Doc API: $_"
+                $responseObj = @{ success = $false; error = $_.Exception.Message }
+                $resBody = $responseObj | ConvertTo-Json
+                $response.StatusCode = 500
+                $response.ContentType = "application/json"
+                $outBytes = [System.Text.Encoding]::UTF8.GetBytes($resBody)
+                $response.ContentLength64 = $outBytes.Length
+                $response.OutputStream.Write($outBytes, 0, $outBytes.Length)
+            }
+            $response.Close()
+            continue
+        }
+
         $filePath = Join-Path $path $localPath
 
         if (Test-Path $filePath -PathType Leaf) {
